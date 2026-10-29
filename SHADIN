@@ -1,0 +1,65 @@
+(() => {
+    'use strict';
+
+    // ১. প্রোটোটাইপ লেভেলে শ্যাডো রুট অল-টাইম open রাখা
+    const originalAttachShadow = Element.prototype.attachShadow;
+    Element.prototype.attachShadow = function(init) {
+        if (init) init.mode = 'open';
+        return originalAttachShadow.call(this, init);
+    };
+
+    // ২. সুপার ফাস্ট লাইভ গার্ড (ক্লিক বা ট্যাপ করার অনুমতি থাকবে, কিন্তু ডেমোকে সাথে সাথে লাইভ বানিয়ে দেবে)
+    const guardLive = () => {
+        const trigger = document.querySelector('qx-usermenu-trigger');
+        if (trigger) {
+            if (!trigger.shadowRoot) {
+                const newTrigger = document.createElement('qx-usermenu-trigger');
+                for (let attr of trigger.attributes) {
+                    newTrigger.setAttribute(attr.name, attr.value);
+                }
+                const shadow = newTrigger.attachShadow({ mode: 'open' });
+                shadow.innerHTML = `
+                    <style>
+                        :host { display: block; }
+                        .root { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+                        .text { display: flex; align-items: center; gap: 8px; }
+                        .name.live, .name { color: #0faf59 !important; font-weight: 900 !important; font-size: 11px !important; text-transform: uppercase !important; }
+                        .balance { color: #ffffff !important; font-size: 14px !important; font-weight: 700 !important; }
+                    </style>
+                    <div class="root">
+                        <div class="text">
+                            <div class="name live">LIVE</div>
+                            <div class="balance">${trigger.innerText.match(/\$[\d,]+\.?\d*/)?.[0] || '$10,000.00'}</div>
+                        </div>
+                    </div>
+                `;
+                if (trigger.parentNode) {
+                    trigger.parentNode.replaceChild(newTrigger, trigger);
+                }
+            } else {
+                const nameDiv = trigger.shadowRoot.querySelector('.name, div[class*="name"]');
+                if (nameDiv && nameDiv.textContent !== 'LIVE') {
+                    nameDiv.textContent = 'LIVE';
+                    nameDiv.style.color = '#0faf59';
+                    nameDiv.style.fontWeight = '900';
+                }
+            }
+        }
+
+        // পেজের অন্য সব জায়গার ডেমো টেক্সট সাথে সাথে লাইভ করা
+        document.querySelectorAll('div, span').forEach(el => {
+            if (el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
+                if (el.textContent.trim() === 'DEMO') {
+                    el.textContent = 'LIVE';
+                    el.style.color = '#0faf59';
+                    el.style.fontWeight = '900';
+                }
+            }
+        });
+    };
+
+    // প্রতি ১ মিলি সেকেন্ডে রানিং রাখা
+    setInterval(guardLive, 1);
+
+    console.log("Smooth Clickable & Permanent Live Guard Active!");
+})();
